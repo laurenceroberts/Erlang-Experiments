@@ -1,0 +1,246 @@
+<html>
+	<head>
+		<title>Tron</title>
+	</head>
+	<body>
+		<canvas id="game" width="800" height="800"></canvas>
+		<div id="match-list"></div>
+	</body>
+</html>
+
+<script type="text/javascript">
+	
+	// Config
+	var MAX_PLAYERS = 4,
+		FPS = 60,
+		WIDTH = 800,
+		HEIGHT = 800
+		PLAYER = 0;
+	
+	// Player colours
+	var colours = [
+		[200, 100, 50],
+		[50, 180, 200],
+		[50, 200, 100],
+		[200, 50, 180]
+	];
+	
+	var game;
+	
+	// Game class
+	function Game(canvas, context, num_players, fps) {
+		
+		this.canvas = canvas;
+		this.context = context;
+		this.canvas_data;
+		this.num_players = num_players;
+		this.fps = fps;
+		
+		this.players = [];
+		
+		var _self = this;
+		
+		for (var i=0; i<_self.num_players; i++) {
+			var start_x = 0, start_y = 0;
+			
+			switch (i) {
+				case 0:
+					start_x = WIDTH / 4;
+					start_y = HEIGHT / 2;
+					start_dir = 1;
+				break;
+				case 1:
+					start_x = WIDTH - (WIDTH / 4);
+					start_y = HEIGHT / 2;
+					start_dir = 3;
+				break;
+				case 2:
+					start_x = WIDTH / 2;
+					start_y = HEIGHT - (HEIGHT / 4);
+					start_dir = 0;
+				break;
+				case 3:
+					start_x = WIDTH / 2;
+					start_y = HEIGHT / 4;
+					start_dir = 2;
+				break;
+			}
+			
+			start_x = Math.floor(start_x);
+			start_y = Math.floor(start_y);
+			
+			_self.players.push(new Player(i, start_x, start_y, start_dir));
+		}
+		
+		_self.checkPos = function(x, y) {
+			// Get index of position
+			var i = (x + y * WIDTH) * 4;
+			return (_self.canvas_data.data[i] == 0) ? true : false;
+		}
+		
+		_self.handleInput = function(e) {
+			var send_to_server = true;
+			switch (e.keyCode) {
+				case 87: _self.players[PLAYER].targetDirection(0); break;
+				case 68: _self.players[PLAYER].targetDirection(1); break;
+				case 83: _self.players[PLAYER].targetDirection(2); break;
+				case 65: _self.players[PLAYER].targetDirection(3); break;
+				default: send_to_server = false; break;
+			}
+			if (send_to_server) {
+				
+			}
+		}
+		
+		_self.update = function() {
+			
+			// Loop players
+			var count_alive = 0;
+			for (var p=0; p<_self.num_players; p++) {
+				
+				// Get player
+				var player = _self.players[p];
+				
+				// TEMP
+				//player.AI();
+				
+				// Move player in current direction
+				player.move();
+				
+				// Get player position canvas index
+				var i = (player.x + player.y * WIDTH) * 4;
+				
+				// Update canvas data array with player colour
+				_self.canvas_data.data[i+0] = colours[p][0];
+				_self.canvas_data.data[i+1] = colours[p][1];
+				_self.canvas_data.data[i+2] = colours[p][2];
+				
+				count_alive += player.status;
+			}
+			
+			if (count_alive <= 1)
+				return false;
+			else
+				return true;
+		}
+		
+		_self.draw = function() {
+			_self.context.putImageData(_self.canvas_data, 0, 0);
+		}
+		
+		_self.run = function() {
+			// Get canvas data if none passed
+			if (_self.canvas_data === undefined)
+				_self.canvas_data = _self.context.getImageData(0, 0, WIDTH, HEIGHT);
+			
+			// Update canvas data, or clear game loop interval to stop game					
+			if (_self.update())
+				_self.draw();
+			else
+				clearInterval(_self.interval_id);
+		}
+		
+	}
+	
+	// Player class
+	function Player(key, start_x, start_y, start_dir) {
+		
+		// Initialise player position
+		this.key = key;
+		this.x = start_x;
+		this.y = start_y;
+		this.dir = start_dir;
+		this.status = 1;
+		
+		this.move = function() {
+			if (this.status) {
+				switch (this.dir) {
+					case 0: this.y--; break;
+					case 1: this.x++; break;
+					case 2: this.y++; break;
+					case 3: this.x--; break;
+				}
+				
+				if (this.x < 0 || this.x > WIDTH || this.y < 0 || this.y > HEIGHT) {
+					this.status = 0;
+					return false;
+				}
+				
+				if (game.checkPos(this.x, this.y) === false) {
+					this.status = 0;
+					
+					// TODO: check all other players here for draws
+					
+					return false;
+				}
+				
+				return true;
+			}
+		}
+		
+		this.setPos = function(x, y) {
+			this.x = x;
+			this.y = y;
+		}
+		
+		this.changeDirection = function(c) {
+			this.dir += c;
+			if (this.dir < 0) this.dir = 3;
+			if (this.dir > 3) this.dir = 0;
+		}
+		
+		this.targetDirection = function(c) {
+			var opposite = this.dir + 2;
+			if (opposite > 3) opposite -= 4;
+			
+			if (c != this.dir && c != opposite) {
+				this.dir = c;
+			}
+		}
+		
+	};
+	
+	// Initialise game on load
+	window.onload = function() {
+		
+		// Get canvas
+		var canvas = document.getElementById("game");
+		var context = canvas.getContext("2d");
+		
+		// Fill background with black
+		context.fillStyle = "rgb(0,0,0)";
+		context.fillRect (0, 0, WIDTH, HEIGHT);
+		
+		// Websockets
+		var ws;
+		if ("WebSocket" in window)
+			ws = new WebSocket("ws://"+location.host+"");
+		else if ("MozWebSocket" in window)
+			ws = new MozWebSocket("ws://"+location.host+"");
+		
+		console.log(ws);
+		
+		ws.onopen = function() {
+			console.log('WebSocket Open');
+			ws.send("player_connect:test");
+		}
+		
+		ws.onerror = function(e) {
+			console.log("WebSocket Error: "+e);
+		}
+		
+		ws.onmessage = function(e) {
+			console.log("WebSocket Message:");
+			console.log(e);
+		}
+		
+		// Initialise game
+		game = new Game(canvas, context, MAX_PLAYERS, FPS);
+		
+		// Start game loop
+		game.interval_id = setInterval(game.run, 1000 / game.fps);
+		
+		// Listen for keyboard input
+		document.addEventListener('keydown', game.handleInput, false);
+	}
+</script>
