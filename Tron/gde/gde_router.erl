@@ -6,7 +6,8 @@ start(Port) ->
 		gde_game:game_loop([], [])
 	end)),
 	misultin:start_link([
-		{port, Port}, {loop, fun(Req) -> gde_router:handle_http(Req, Port) end},
+		{port, Port},
+		{loop, fun(Req) -> gde_router:handle_http(Req, Port) end},
 		{ws_loop, fun(Ws) -> gde_router:handle_websocket(Ws) end},
 		{ws_autoexit, true}
 	]).
@@ -29,12 +30,10 @@ handle_websocket(Ws) ->
 			game_loop ! {player_join_match, PlayerHash};
 		
 		{send, Data} ->
-			Ws:send(Data),
-			
-		gde_router:handle_websocket(Ws)
-	after 2000 ->
-		gde_router:handle_websocket(Ws)
-	end.
+			io:format("gde_router:handle_websocket -- sending data ~p~n", [Data]),
+			Ws:send(Data)
+	end,
+	gde_router:handle_websocket(Ws).
 
 
 %% HOOKS

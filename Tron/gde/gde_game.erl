@@ -2,16 +2,16 @@
 -export([game_loop/2]).
 
 -record(match, {key, max_players, status, rounds, players}).
--record(player, {pid, name=none, hash, mode}).
+-record(player, {ws_pid, name=none, hash, mode}).
 
 game_loop(Matches, Players) ->
 	receive
-		{player_connect, Pid, Name} ->
-			Player = #player{pid=Pid, name=Name, hash=Name, mode=connect},
+		{player_connect, WsPid, Name} ->
+			Player = #player{ws_pid=WsPid, name=Name, hash=Name, mode=connect},
 			NewPlayers = [{Player#player.hash, Player} | Players],
 			NewMatches = Matches,
 			% gde_router:handle_websocket(send, "jelly babies"),
-			io:format("gde_game:player_connect -- ~p~n", [Name]);
+			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
 			Player = proplists:get_value(PlayerHash, Players),
@@ -58,10 +58,14 @@ game_loop(Matches, Players) ->
 			NewPlayers = Players,
 			NewMatches = Matches,
 			io:format("gde_game:match_start -- ~p~n", [Key])
-		
+	
+	after 2000 ->
+		NewPlayers = Players,
+		NewMatches = Matches,
+		send_matches(Matches, Players)
 	end,
 	io:format("gde_game:received~n"),
-	game_loop(NewMatches, NewPlayers).
+	gde_game:game_loop(NewMatches, NewPlayers).
 
 find_match(Matches) ->
 	% Loop matches, check for empty spaces, drop into first found with less than 4 players
@@ -73,3 +77,11 @@ find_match(Matches) ->
 				Match
 		end
 	end, Matches).
+
+send_matches(Matches, Players) ->
+	io:format("blah ~p~n", [Players]),
+	Matches,
+	lists:foreach(fun({_, Player}) ->
+		io:format("loop match ~p~n", [Player#player.ws_pid]),
+		Player#player.ws_pid ! {send, "matchlist"}
+	end, Players).

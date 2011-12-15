@@ -7,4 +7,4 @@ site_url() ->
 	"192.168.1.433".
 
 site_path() ->
-	"/Users/laurence/_STRAWBERRYSOUP/erl/Tron/".
+	"/Users/laurence/github/Erlang Experiments/Tron/".
