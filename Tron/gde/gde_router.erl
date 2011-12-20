@@ -30,7 +30,7 @@ handle_websocket(Ws) ->
 			game_loop ! {player_join_match, PlayerHash};
 		
 		{send, Data} ->
-			io:format("gde_router:handle_websocket -- sending data ~p~n", [Data]),
+			% io:format("gde_router:handle_websocket -- sending data ~p~n", [Data]),
 			Ws:send(Data)
 	end,
 	gde_router:handle_websocket(Ws).

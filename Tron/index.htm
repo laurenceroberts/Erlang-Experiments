@@ -4,7 +4,7 @@
 	</head>
 	<body>
 		<canvas id="game" width="800" height="800"></canvas>
-		<div id="match-list"></div>
+		<div id="matchlist"></div>
 	</body>
 </html>
 
@@ -232,6 +232,20 @@
 		ws.onmessage = function(e) {
 			console.log("WebSocket Message:");
 			console.log(e);
+			
+			var data = e.data.split('::'),
+				type = data[0],
+				content = data[1];
+			switch (type) {
+				case 'matchlist':
+					if (content.length == 0) {
+						// no existing matches
+						document.getElementById('matchlist').innerHTML = "<p>There are no existing matches</p>";
+					} else {
+						document.getElementById('matchlist').innerHTML = content;
+					}
+				break;
+			}
 		}
 		
 		// Initialise game

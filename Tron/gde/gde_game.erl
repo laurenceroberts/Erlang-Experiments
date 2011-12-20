@@ -10,7 +10,6 @@ game_loop(Matches, Players) ->
 			Player = #player{ws_pid=WsPid, name=Name, hash=Name, mode=connect},
 			NewPlayers = [{Player#player.hash, Player} | Players],
 			NewMatches = Matches,
-			% gde_router:handle_websocket(send, "jelly babies"),
 			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
@@ -64,11 +63,11 @@ game_loop(Matches, Players) ->
 		NewMatches = Matches,
 		send_matches(Matches, Players)
 	end,
-	io:format("gde_game:received~n"),
+	% io:format("gde_game:received~n"),
 	gde_game:game_loop(NewMatches, NewPlayers).
 
+% Loop matches, check for empty spaces, drop into first found with less than 4 players
 find_match(Matches) ->
-	% Loop matches, check for empty spaces, drop into first found with less than 4 players
 	lists:foreach(fun(Match) ->
 		if
 			erlang:length(Match#match.players) == 4 ->
@@ -78,10 +77,12 @@ find_match(Matches) ->
 		end
 	end, Matches).
 
+% Build matchlist and send to every player
 send_matches(Matches, Players) ->
-	io:format("blah ~p~n", [Players]),
-	Matches,
+	MatchList = lists:map(fun(Match) -> 
+		Match#match.players ++ "," ++ Match#match.max_players ++ "," ++ Match#match.status
+	end, Matches),
+	
 	lists:foreach(fun({_, Player}) ->
-		io:format("loop match ~p~n", [Player#player.ws_pid]),
-		Player#player.ws_pid ! {send, "matchlist"}
+		Player#player.ws_pid ! {send, "matchlist::" ++ string:join(MatchList, "|")}
 	end, Players).
