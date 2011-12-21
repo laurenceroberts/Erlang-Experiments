@@ -1,10 +1,46 @@
+<style>
+	html,body,div,span,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,img,ins,kbd,q,samp,small,strike,strong,sub,sup,tt,var,dd,dl,dt,li,ol,ul,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		font-weight: normal;
+		font-style: normal;
+		font-size: 100%;
+		line-height: 1;
+		font-family: inherit;
+	}
+	
+	em {
+		font-style: italic;
+	}
+	
+	body {
+		font-family: 'Arial', sans-serif;
+		font-size: 14px;
+	}
+	
+	#game {
+		float: left;
+	}
+	
+	#matchlist {
+		float: left;
+		padding: 20px;
+		width: 200px;
+	}
+	
+	#matchlist p {
+		margin-bottom: 10px;
+	}
+</style>
+
 <html>
 	<head>
 		<title>Tron</title>
 	</head>
 	<body>
 		<canvas id="game" width="800" height="800"></canvas>
-		<div id="matchlist"></div>
+		<div id="matchlist"><p><em>Loading matches...</em></p></div>
 	</body>
 </html>
 
@@ -240,9 +276,25 @@
 				case 'matchlist':
 					if (content.length == 0) {
 						// no existing matches
-						document.getElementById('matchlist').innerHTML = "<p>There are no existing matches</p>";
+						document.getElementById('matchlist').innerHTML = '<p><em>No matches found</em></p>'; //<p><a href="#create-match" data-ws-send="create-match" class="ws-send">Create match</a></p>
 					} else {
-						document.getElementById('matchlist').innerHTML = content;
+						// document.getElementById('matchlist').innerHTML = content;
+						
+						var html = "<ul>";
+						
+						var matches = content.split('|');
+						for (var m=0; m<matches.length; m++) {
+							var values = matches[m].split(',');
+							html += "<li>";
+								html += "Max Players: " + values[0];
+								html += "Status: " + values[1];
+							html += "</li>";
+						}
+						
+						html += "</ul>";
+						
+						document.getElementById('matchlist').innerHTML = html;
+						
 					}
 				break;
 			}

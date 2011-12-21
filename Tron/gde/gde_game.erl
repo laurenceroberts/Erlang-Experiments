@@ -1,7 +1,7 @@
 -module(gde_game).
 -export([game_loop/2]).
 
--record(match, {key, max_players, status, rounds, players}).
+-record(match, {key, max_players, status, round, players}).
 -record(player, {ws_pid, name=none, hash, mode}).
 
 game_loop(Matches, Players) ->
@@ -9,7 +9,15 @@ game_loop(Matches, Players) ->
 		{player_connect, WsPid, Name} ->
 			Player = #player{ws_pid=WsPid, name=Name, hash=Name, mode=connect},
 			NewPlayers = [{Player#player.hash, Player} | Players],
-			NewMatches = Matches,
+			
+			if
+				(erlang:length(Matches) == 0) ->
+					Match = #match{players=[Player], max_players=4, status=lobby, round=0},
+					NewMatches = [{Match#match.key, Match} | Matches];
+				true ->
+					NewMatches = Matches
+			end,
+			
 			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
@@ -28,7 +36,7 @@ game_loop(Matches, Players) ->
 			% io:format("gde_game:player_leave_match -- ~p~n", [proplists:get_value(PlayerHash, Players)#player.Name]);
 		
 		{match_create, MaxPlayers} ->
-			Match = #match{max_players=MaxPlayers, status=lobby, rounds=1},
+			Match = #match{max_players=MaxPlayers, status=lobby, round=0},
 			NewPlayers = Players,
 			NewMatches = [{Match#match.key, Match} | Matches],
 			io:format("gde_game:match_create -- ~p~n", [MaxPlayers]);
@@ -79,8 +87,12 @@ find_match(Matches) ->
 
 % Build matchlist and send to every player
 send_matches(Matches, Players) ->
-	MatchList = lists:map(fun(Match) -> 
-		Match#match.players ++ "," ++ Match#match.max_players ++ "," ++ Match#match.status
+	MatchList = lists:map(fun({_, Match}) -> 
+		gde:string_format("~p,~p,~p,~p", [Match#match.max_players, Match#match.status, Match#match.round, 
+			lists:map(fun({_, Player}) ->
+				gde:string_format("~p,~p", [Player#player.name, Player#player.mode])
+			end, Players)
+		])
 	end, Matches),
 	
 	lists:foreach(fun({_, Player}) ->
