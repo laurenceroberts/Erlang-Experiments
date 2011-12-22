@@ -12,7 +12,7 @@ game_loop(Matches, Players) ->
 			
 			if
 				(erlang:length(Matches) == 0) ->
-					Match = #match{players=[Player], max_players=4, status=lobby, round=0},
+					Match = #match{players=[{Player#player.hash, Player}], max_players=4, status=lobby, round=0},
 					NewMatches = [{Match#match.key, Match} | Matches];
 				true ->
 					NewMatches = Matches
@@ -88,10 +88,10 @@ find_match(Matches) ->
 % Build matchlist and send to every player
 send_matches(Matches, Players) ->
 	MatchList = lists:map(fun({_, Match}) -> 
-		gde:string_format("~p,~p,~p,~p", [Match#match.max_players, Match#match.status, Match#match.round, 
+		gde:string_format("max_players=~p,num_players=~p,status=~p,round=~p,player_list=~p", [Match#match.max_players, erlang:length(Match#match.players), Match#match.status, Match#match.round,
 			lists:map(fun({_, Player}) ->
 				gde:string_format("~p,~p", [Player#player.name, Player#player.mode])
-			end, Players)
+			end, Match#match.players)
 		])
 	end, Matches),
 	

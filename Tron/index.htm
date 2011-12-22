@@ -17,10 +17,13 @@
 	body {
 		font-family: 'Arial', sans-serif;
 		font-size: 14px;
+		color: #FFFFFF;
+		background: #000000;
 	}
 	
 	#game {
 		float: left;
+		border: 3px solid #FFFFFF;
 	}
 	
 	#matchlist {
@@ -31,6 +34,35 @@
 	
 	#matchlist p {
 		margin-bottom: 10px;
+	}
+	
+	#matchlist ul {
+		list-style: none;
+	}
+	
+	#matchlist li {
+		border: 1px solid #FF5400;
+	}
+	
+	#matchlist li span {
+		display: block;
+		padding: 4px 3px;
+	}
+	
+	#matchlist li .match-name {
+		margin-top: 0px;
+		padding: 4px 6px;
+		font-size: 16px;
+		font-weight: bold;
+		background: #FF5400;
+	}
+	
+	#matchlist li .player-list {
+		
+	}
+	
+	#matchlist li .player-list li {
+		padding: 2px 3px;
 	}
 </style>
 
@@ -55,7 +87,7 @@
 	
 	// Player colours
 	var colours = [
-		[200, 100, 50],
+		[255, 84, 50],
 		[50, 180, 200],
 		[50, 200, 100],
 		[200, 50, 180]
@@ -239,6 +271,8 @@
 	// Initialise game on load
 	window.onload = function() {
 		
+		var player_name = prompt("Enter your name:", "");
+		
 		// Get canvas
 		var canvas = document.getElementById("game");
 		var context = canvas.getContext("2d");
@@ -254,11 +288,9 @@
 		else if ("MozWebSocket" in window)
 			ws = new MozWebSocket("ws://"+location.host+"");
 		
-		console.log(ws);
-		
 		ws.onopen = function() {
 			console.log('WebSocket Open');
-			ws.send("player_connect:test");
+			ws.send("player_connect:"+player_name);
 		}
 		
 		ws.onerror = function(e) {
@@ -266,7 +298,6 @@
 		}
 		
 		ws.onmessage = function(e) {
-			console.log("WebSocket Message:");
 			console.log(e);
 			
 			var data = e.data.split('::'),
@@ -284,11 +315,19 @@
 						
 						var matches = content.split('|');
 						for (var m=0; m<matches.length; m++) {
-							var values = matches[m].split(',');
-							html += "<li>";
-								html += "Max Players: " + values[0];
-								html += "Status: " + values[1];
-							html += "</li>";
+							var raw = matches[m].split(',');
+							var values = [];
+							for (var r=0; r<raw.length; r++) {
+								var temp = raw[r].split("=");
+								values[temp[0]] = temp[1];
+							}
+							
+							html += '<li>';
+								html += '<span class="match-name">Match #1 ['+values['num_players']+"/"+values['max_players']+'] ['+values['status']+']</span>';
+								html += '<ul class="player-list">';
+									html += '<li>Laz - 12</li>';
+								html += '</ul>';
+							html += '</li>';
 						}
 						
 						html += "</ul>";
