@@ -78,6 +78,10 @@
 
 <script type="text/javascript">
 	
+	function debug(m) {
+		console.log(m);
+	}
+	
 	// Config
 	var MAX_PLAYERS = 4,
 		FPS = 60,
@@ -96,8 +100,9 @@
 	var game;
 	
 	// Game class
-	function Game(canvas, context, num_players, fps) {
+	function Game(ws, canvas, context, num_players, fps) {
 		
+		this.ws = ws;
 		this.canvas = canvas;
 		this.context = context;
 		this.canvas_data;
@@ -147,16 +152,16 @@
 		}
 		
 		_self.handleInput = function(e) {
-			var send_to_server = true;
+			var send_to_server = false;
 			switch (e.keyCode) {
-				case 87: _self.players[PLAYER].targetDirection(0); break;
-				case 68: _self.players[PLAYER].targetDirection(1); break;
-				case 83: _self.players[PLAYER].targetDirection(2); break;
-				case 65: _self.players[PLAYER].targetDirection(3); break;
-				default: send_to_server = false; break;
+				case 87: _self.players[PLAYER].targetDirection(0); send_to_server = 'player_control_dir:0'; break;
+				case 68: _self.players[PLAYER].targetDirection(1); send_to_server = 'player_control_dir:1'; break;
+				case 83: _self.players[PLAYER].targetDirection(2); send_to_server = 'player_control_dir:2'; break;
+				case 65: _self.players[PLAYER].targetDirection(3); send_to_server = 'player_control_dir:3'; break;
+				// default: send_to_server = false; break;
 			}
 			if (send_to_server) {
-				
+				_self.ws.send(send_to_server);
 			}
 		}
 		
@@ -289,16 +294,16 @@
 			ws = new MozWebSocket("ws://"+location.host+"");
 		
 		ws.onopen = function() {
-			console.log('WebSocket Open');
+			debug('WebSocket Open');
 			ws.send("player_connect:"+player_name);
 		}
 		
 		ws.onerror = function(e) {
-			console.log("WebSocket Error: "+e);
+			debug("WebSocket Error: "+e);
 		}
 		
 		ws.onmessage = function(e) {
-			console.log(e);
+			debug(e);
 			
 			var data = e.data.split('::'),
 				type = data[0],
@@ -315,15 +320,19 @@
 						
 						var matches = content.split('|');
 						for (var m=0; m<matches.length; m++) {
-							var raw = matches[m].split(',');
+							var raw = matches[m].split(';');
 							var values = [];
 							for (var r=0; r<raw.length; r++) {
 								var temp = raw[r].split("=");
 								values[temp[0]] = temp[1];
 							}
 							
+							var player_list = values['player_list'].split(',');
+							
 							html += '<li>';
-								html += '<span class="match-name">Match #1 ['+values['num_players']+"/"+values['max_players']+'] ['+values['status']+']</span>';
+								html += '<span class="match-name">Match #1</span>';
+								html += '<span class="player-count"> ['+values['num_players']+"/"+values['max_players']+'] ['+values['status']+']</span>';
+								html += '<span class="join" data-match="1"><a href="#join-match-1">Join</a></span>';
 								html += '<ul class="player-list">';
 									html += '<li>Laz - 12</li>';
 								html += '</ul>';
@@ -340,12 +349,17 @@
 		}
 		
 		// Initialise game
-		game = new Game(canvas, context, MAX_PLAYERS, FPS);
+		game = new Game(ws, canvas, context, MAX_PLAYERS, FPS);
 		
 		// Start game loop
 		game.interval_id = setInterval(game.run, 1000 / game.fps);
 		
 		// Listen for keyboard input
 		document.addEventListener('keydown', game.handleInput, false);
+		
+		// Matchlist
+		$('#matchlist .join a').live('click', function() {
+			ws.send('player_join_match:'+PLAYER_HASH);
+		});
 	}
 </script>

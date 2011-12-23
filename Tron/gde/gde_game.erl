@@ -6,6 +6,7 @@
 
 game_loop(Matches, Players) ->
 	receive
+		%% PLAYER JOIN
 		{player_connect, WsPid, Name} ->
 			Player = #player{ws_pid=WsPid, name=Name, hash=Name, mode=connect},
 			NewPlayers = [{Player#player.hash, Player} | Players],
@@ -17,7 +18,7 @@ game_loop(Matches, Players) ->
 				true ->
 					NewMatches = Matches
 			end,
-			
+			Player#player.ws_pid ! {send, "player_connected:" + Player#player.hash},
 			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
@@ -35,6 +36,15 @@ game_loop(Matches, Players) ->
 			NewMatches = [{UMatch#match.key, UMatch} | proplists:delete(MatchKey, Matches)];
 			% io:format("gde_game:player_leave_match -- ~p~n", [proplists:get_value(PlayerHash, Players)#player.Name]);
 		
+		
+		%% PLAYER CONTROL
+		{player_control_dir, TargetDir} ->
+			NewPlayers = Players,
+			NewMatches = Matches,
+			io:format("gde_game:player_control_dir -- ~p~n", [TargetDir]);
+		
+		
+		%% MATCH
 		{match_create, MaxPlayers} ->
 			Match = #match{max_players=MaxPlayers, status=lobby, round=0},
 			NewPlayers = Players,
@@ -88,7 +98,7 @@ find_match(Matches) ->
 % Build matchlist and send to every player
 send_matches(Matches, Players) ->
 	MatchList = lists:map(fun({_, Match}) -> 
-		gde:string_format("max_players=~p,num_players=~p,status=~p,round=~p,player_list=~p", [Match#match.max_players, erlang:length(Match#match.players), Match#match.status, Match#match.round,
+		gde:string_format("max_players=~p;num_players=~p;status=~p;round=~p;player_list=~p", [Match#match.max_players, erlang:length(Match#match.players), Match#match.status, Match#match.round,
 			lists:map(fun({_, Player}) ->
 				gde:string_format("~p,~p", [Player#player.name, Player#player.mode])
 			end, Match#match.players)
