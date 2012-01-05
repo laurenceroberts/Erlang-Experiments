@@ -12,13 +12,17 @@ game_loop(Matches, Players) ->
 			NewPlayers = [{Player#player.hash, Player} | Players],
 			
 			if
-				(erlang:length(Matches) == 0) ->
+				(length(Matches) =:= 0) ->
 					Match = #match{players=[{Player#player.hash, Player}], max_players=4, status=lobby, round=0},
 					NewMatches = [{Match#match.key, Match} | Matches];
 				true ->
+					Match = gde_game:find_match(Matches),
+					UMatch = Match#match{players=[Player | Match#match.players]},
+					NewMatches = [{UMatch#match.key, UMatch} | proplists:delete(UMatch#match.key, Matches)],
 					NewMatches = Matches
 			end,
-			Player#player.ws_pid ! {send, "player_connected:" + Player#player.hash},
+			Player#player.ws_pid ! {send, "player_connected:" ++ Player#player.hash},
+			gde_game:send_matches(NewMatches, NewPlayers),
 			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
@@ -76,24 +80,26 @@ game_loop(Matches, Players) ->
 			NewMatches = Matches,
 			io:format("gde_game:match_start -- ~p~n", [Key])
 	
-	after 2000 ->
-		NewPlayers = Players,
-		NewMatches = Matches,
-		send_matches(Matches, Players)
+	% after 2000 ->
+	% 		NewPlayers = Players,
+	% 		NewMatches = Matches,
+	% 		send_matches(Matches, Players)
 	end,
 	% io:format("gde_game:received~n"),
 	gde_game:game_loop(NewMatches, NewPlayers).
 
 % Loop matches, check for empty spaces, drop into first found with less than 4 players
 find_match(Matches) ->
-	lists:foreach(fun(Match) ->
+	catch lists:foreach(fun(Match) ->
+		io:format("~p~n", [Match]),
 		if
-			erlang:length(Match#match.players) == 4 ->
-				skip;
-			true -> 
-				Match
+			length(Match#match.players) < 4 ->
+				throw(Match);
+			true ->
+				skip
 		end
 	end, Matches).
+	
 
 % Build matchlist and send to every player
 send_matches(Matches, Players) ->

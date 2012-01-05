@@ -26,11 +26,11 @@ handle_websocket(Ws) ->
 		{browser, "player_connect:" ++ Name} ->
 			game_loop ! {player_connect, self(), Name};
 		
-		{browser, "player_join_match:" ++ PlayerHash} ->
-			game_loop ! {player_join_match, PlayerHash};
+		% {browser, "player_join_match:" ++ PlayerHash} ->
+			% game_loop ! {player_join_match, PlayerHash};
 		
-		{browser, "player_control_dir:" ++ TargetDir} ->
-			game_loop ! {player_control_dir, TargetDir};
+		% {browser, "player_control_dir:" ++ TargetDir} ->
+			% game_loop ! {player_control_dir, TargetDir};
 		
 		{send, Data} ->
 			% io:format("gde_router:handle_websocket -- sending data ~p~n", [Data]),
