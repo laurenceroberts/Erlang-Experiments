@@ -13,16 +13,21 @@ game_loop(Matches, Players) ->
 			
 			if
 				(length(Matches) =:= 0) ->
-					Match = #match{players=[{Player#player.hash, Player}], max_players=4, status=lobby, round=0},
+					io:format("first match~n"),
+					Match = #match{key=1, players=[{Player#player.hash, Player}], max_players=4, status=lobby, round=0},
 					NewMatches = [{Match#match.key, Match} | Matches];
 				true ->
-					Match = gde_game:find_match(Matches),
-					UMatch = Match#match{players=[Player | Match#match.players]},
-					NewMatches = [{UMatch#match.key, UMatch} | proplists:delete(UMatch#match.key, Matches)],
-					NewMatches = Matches
+					io:format("match exists~n"),
+					Match = find_match(Matches),
+					io:format("found match~n"),
+					UMatch = #match{key=Match#match.key, max_players=Match#match.max_players, status=Match#match.status, round=Match#match.round, players=[Player | Match#match.players]},
+					io:format("created match~n"),
+					NewMatches = [{UMatch#match.key, UMatch} | proplists:delete(Match#match.key, Matches)],
+					io:format("update newmatches~n")
 			end,
+			
 			Player#player.ws_pid ! {send, "player_connected:" ++ Player#player.hash},
-			gde_game:send_matches(NewMatches, NewPlayers),
+			send_matches(NewMatches, NewPlayers),
 			io:format("gde_game:player_connect -- ~p ~p ~n", [WsPid, Name]);
 		
 		{player_join_match, PlayerHash, MatchKey} ->
@@ -90,7 +95,7 @@ game_loop(Matches, Players) ->
 
 % Loop matches, check for empty spaces, drop into first found with less than 4 players
 find_match(Matches) ->
-	catch lists:foreach(fun(Match) ->
+	catch lists:foreach(fun({_, Match}) ->
 		io:format("~p~n", [Match]),
 		if
 			length(Match#match.players) < 4 ->
@@ -104,8 +109,8 @@ find_match(Matches) ->
 % Build matchlist and send to every player
 send_matches(Matches, Players) ->
 	MatchList = lists:map(fun({_, Match}) -> 
-		gde:string_format("max_players=~p;num_players=~p;status=~p;round=~p;player_list=~p", [Match#match.max_players, erlang:length(Match#match.players), Match#match.status, Match#match.round,
-			lists:map(fun({_, Player}) ->
+		gde:string_format("max_players=~p;num_players=~p;status=~p;round=~p;player_list=~p", [Match#match.max_players, erlang:length(Match#match.players), Match#match.status, Match#match.round
+			,lists:map(fun({_, Player}) ->
 				gde:string_format("~p,~p", [Player#player.name, Player#player.mode])
 			end, Match#match.players)
 		])
